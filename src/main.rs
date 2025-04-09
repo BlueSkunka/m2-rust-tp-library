@@ -2,7 +2,6 @@ use std::error::Error;
 use std::fs::File;
 use std::io;
 use std::path::Path;
-use csv::StringRecordsIter;
 use dialoguer::Select;
 
 const LIBRARY_FILE: &str = "library.csv";
@@ -14,6 +13,12 @@ struct Book {
     author: String,
     isbn: String,
     published_year: String
+}
+
+impl Book {
+    fn print(&self) {
+        println!("{} est un livre écrit par {} en {}. Son ISBN est le {}", self.title, self.author, self.published_year, self.isbn);
+    }
 }
 
 // Enumération des actions possibles
@@ -48,7 +53,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 // Assure l'existence du fichier csv
 fn doctor() {
     if !Path::new(LIBRARY_FILE).exists() {
-        let file = File::create(LIBRARY_FILE);
+        let _ = File::create(LIBRARY_FILE);
         println!("Library created")
     }
 
@@ -126,7 +131,7 @@ fn search_book_action() {
 
     if search_book(&title) {
         println!("Livre trouvé !");
-        println!("{:?}", get_book(title));
+        get_book(title).print();
     } else {
         println!("Livre non trouvé !");
     }
@@ -171,7 +176,7 @@ fn get_book(title: String) -> Book {
 fn read_library_action() {
     println!("Reading library ...");
     for book in read_library() {
-        println!("{:?}", book);
+        book.print();
     }
     println!("Nice library !");
 }
