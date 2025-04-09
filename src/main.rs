@@ -25,20 +25,22 @@ enum Action {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    read_library();
-
     doctor();
 
-    let action = menu();
+    let mut action = menu();
 
-    // Suivant l'action choisis, on renvoie vers la méthode qui gère l'action
-    match action {
-        0 => add_book_action(),
-        1 => search_book_action(),
-        2 => read_library_action(),
-        3 => remove_book_action(),
-        _ => println!("Leaving library")
-    };
+    while action != 4 {
+        // Suivant l'action choisis, on renvoie vers la méthode qui gère l'action
+        match action {
+            0 => add_book_action(),
+            1 => search_book_action(),
+            2 => read_library_action(),
+            3 => remove_book_action(),
+            _ => println!("Leaving library")
+        };
+
+        action = menu();
+    }
 
     Ok(())
 }
@@ -79,29 +81,37 @@ fn add_book_action() {
     // Faire saisir les champs à l'utilisateur
     let mut title = String::new();
 
+    println!("Please enter a title");
     io::stdin().read_line(&mut title).expect("Impossible de lire votre saisie !");
 
+    println!("Please enter a author");
     let mut author = String::new();
     io::stdin().read_line(&mut author).expect("Impossible de lire saisie !");
 
+    println!("Please enter a isbn number");
     let mut isbn = String::new();
     io::stdin().read_line(&mut isbn).expect("Impossible de lire saisie !");
 
+    println!("Please enter a published year");
     let mut published_year = String::new();
     io::stdin().read_line(&mut published_year).expect("Impossible de lire saisie !");
 
     let book: Book = Book{
-        title: title,
-        author: author,
-        isbn: isbn,
-        published_year: published_year
+        title: title.trim().to_string(),
+        author: author.trim().to_string(),
+        isbn: isbn.trim().to_string(),
+        published_year: published_year.trim().to_string()
     };
 
     // lecture des records existant
-    if (search_book(&book.title)) {
+    if search_book(&book.title) {
         println!("Ce livre est déjà en rayon !");
     } else {
         println!("Ajout du livre");
+        let mut books = read_library();
+        books.push(book);
+        write_library(books);
+        println!("Livre ajouté !");
     }
 
 
@@ -125,7 +135,7 @@ fn search_book_action() {
 // Détermine si un livre existe
 fn search_book(title: &String) -> bool {
     for book in read_library() {
-        if title.to_string() == book.title {
+        if title.to_string().trim() == book.title.trim() {
             return true;
         }
     }
@@ -163,24 +173,24 @@ fn read_library_action() {
     for book in read_library() {
         println!("{:?}", book);
     }
+    println!("Nice library !");
 }
 
 fn read_library() -> Vec<Book> {
-    let file = File::open(LIBRARY_FILE);
-    let mut reader = csv::Reader::from_reader(file);
+    let mut reader = csv::Reader::from_path(LIBRARY_FILE).unwrap();
     let mut vec_records = Vec::<Book>::new();
 
     for result in reader.deserialize() {
-        println!("{:?}", result);
-        let record: (String, Vec<String>) = result.unwrap();
+        let record: Vec<String> = result.unwrap();
 
-        println!("{} , {:?}", record.0, record.1);
         let book: Book = Book {
-            title: record.1[0].clone(),
-            author: record.1[1].clone(),
-            isbn: record.1[2].clone(),
-            published_year: record.1[3].clone()
+            title: record[0].clone(),
+            author: record[1].clone(),
+            isbn: record[2].clone(),
+            published_year: record[3].clone()
         };
+
+        vec_records.push(book);
     }
 
     vec_records
@@ -196,8 +206,10 @@ fn remove_book_action() {
     let mut new_books = Vec::<Book>::new();
 
     for book in read_library() {
-        if title != book.title {
+        if title != book.title && title != book.isbn {
             new_books.push(book);
+        } else {
+            println!("Le livre est supprimé");
         }
     }
 
@@ -207,9 +219,9 @@ fn remove_book_action() {
 // Réécriture de la librairie
 fn write_library(books: Vec<Book>) -> Result<(), Box<dyn Error>> {
     let mut writer = csv::Writer::from_path(LIBRARY_FILE);
-
+    writer.as_mut().unwrap().write_record(&["Titre", "Auteur", "ISBN", "Année de publication"]);
     for book in books {
-        &writer.unwrap().write_record(&[book.title, book.author, book.isbn, book.published_year]).expect("TODO: panic message");
+        writer.as_mut().unwrap().write_record(&[book.title, book.author, book.isbn, book.published_year]).expect("panic message");
     }
 
     writer.unwrap().flush()?;
